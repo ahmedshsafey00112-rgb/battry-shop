@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نظام إدارة محل بطاريات</title>
+<style>
+:root{
+  --bg:#f4f3f8;--card:#fff;--text:#1a1520;--muted:#6b6478;--border:#e5e1ec;
+  --accent:#7c3aed;--accent2:#16a34a;--danger:#dc2626;--warn:#d97706;--card2:#ede9f7;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0b0710;--card:#160f22;--text:#f1edf9;--muted:#a396bb;--border:#2a2038;--card2:#1e1530;}
+}
+:root[data-theme="dark"]{--bg:#0b0710;--card:#160f22;--text:#f1edf9;--muted:#a396bb;--border:#2a2038;--card2:#1e1530;}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;height:100%;background:radial-gradient(circle at 20% 0%,var(--card2),var(--bg) 60%);color:var(--text);font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:14px}
+header{position:sticky;top:0;padding-top:env(safe-area-inset-top,0px);background:linear-gradient(90deg,#4c1d95,#7c3aed);color:#fff;padding:14px 16px;font-weight:700;font-size:17px;z-index:5;display:flex;align-items:center;justify-content:space-between}
+header .hbtns{display:flex;gap:8px}
+header button.icon{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+nav{display:flex;overflow-x:auto;gap:4px;background:var(--card);border-bottom:1px solid var(--border);padding:6px 8px}
+nav button{flex:0 0 auto;padding:8px 12px;border:none;background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap}
+nav button.active{background:var(--accent);color:#fff}
+main{padding:14px;max-width:1100px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;box-shadow:0 2px 10px rgba(124,58,237,.08)}
+.stat b{display:block;font-size:20px;margin-top:4px;color:var(--accent)}
+.stat span{color:var(--muted);font-size:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:0 2px 10px rgba(124,58,237,.06)}
+.loginwrap{position:fixed;inset:0;background:radial-gradient(circle at 30% 20%,#3b0764,#0b0710 65%);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.loginbox{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(124,58,237,.35)}
+.loginbox h1{margin:0 0 4px;font-size:19px;color:var(--text)}
+.loginbox p{margin:0 0 18px;color:var(--muted);font-size:12.5px}
+.loginbox label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);margin-bottom:12px}
+.loginbox button{width:100%;margin-top:6px;padding:10px;border:none;border-radius:8px;background:linear-gradient(90deg,#4c1d95,#7c3aed);color:#fff;font-weight:700;cursor:pointer}
+.loginerr{color:#f87171;font-size:12px;min-height:16px;margin-top:6px}
+h2{margin:0 0 10px;font-size:16px}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:end}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:3px}
+input,select{padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;width:100%}
+button.btn{padding:9px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-size:13px}
+button.btn.g{background:var(--accent2)}button.btn.r{background:var(--danger)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+.tblwrap{overflow-x:auto}
+th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+.badge{padding:2px 8px;border-radius:20px;font-size:11px}
+.b-ok{background:#dcfce7;color:#166534}.b-warn{background:#fef3c7;color:#92400e}.b-bad{background:#fee2e2;color:#991b1b}
+.chat{border:1px solid var(--border);border-radius:10px;padding:10px;min-height:80px;background:var(--bg);margin-bottom:8px;font-size:13px}
+.msg{margin-bottom:8px}.msg b{color:var(--accent)}
+.hint{color:var(--muted);font-size:12px;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div class="loginwrap" id="loginWrap">
+  <div class="loginbox">
+    <h1>🔋 تسجيل دخول الأدمن</h1>
+    <p id="loginSub">أدخل بيانات الدخول للوصول لنظام إدارة المحل</p>
+    <form id="fLogin">
+      <label>اسم المستخدم<input name="user" required autocomplete="username"></label>
+      <label>كلمة المرور<input name="pass" type="password" required autocomplete="current-password"></label>
+      <button type="submit">دخول</button>
+    </form>
+    <div class="loginerr" id="loginErr"></div>
+  </div>
+</div>
+
+<header>
+  <span>🔋 نظام إدارة محل البطاريات</span>
+  <span class="hbtns">
+    <button class="icon" id="themeBtn" title="تبديل الوضع الليلي">🌙</button>
+    <button class="icon" id="logoutBtn" title="تسجيل خروج">خروج</button>
+  </span>
+</header>
+<nav id="nav"></nav>
+<main>
+
+<div class="tab" id="tab-dash">
+  <div class="grid" id="dashGrid"></div>
+  <div class="card"><h2>تنبيهات المخزون والضمانات</h2><div id="dashAlerts"></div></div>
+</div>
+
+<div class="tab" id="tab-products">
+  <div class="card"><h2>إضافة صنف جديد</h2>
+    <form id="fProduct">
+      <label>اسم البطارية<input required name="name"></label>
+      <label>المقاس<select name="size"><option>40</option><option>44</option><option>55</option><option>60</option><option selected>70</option><option>74</option><option>80</option><option>90</option><option>150</option><option>200</option></select></label>
+      <label>الماركة<input name="brand"></label>
+      <label>المنشأ<select name="origin"><option>مصري</option><option>مستورد</option></select></label>
+      <label>نوع الضمان<select name="warrantyType"><option>استبدال</option><option>استهلاك</option></select></label>
+      <label>مدة الضمان (شهر)<input type="number" name="warrantyMonths" value="12"></label>
+      <label>سعر الشراء<input type="number" name="buyPrice" value="0"></label>
+      <label>سعر البيع<input type="number" name="sellPrice" value="0"></label>
+      <label>الكمية<input type="number" name="qty" value="0"></label>
+      <label>حد التنبيه<input type="number" name="minAlert" value="2"></label>
+      <label>&nbsp;<button class="btn" type="submit">إضافة</button></label>
+    </form>
+  </div>
+  <div class="card"><h2>المخزون</h2><div class="tblwrap"><table id="tblProducts"></table></div></div>
+</div>
+
+<div class="tab" id="tab-sales">
+  <div class="card"><h2>فاتورة بيع جديدة</h2>
+    <form id="fSale">
+      <label>الصنف<select required name="productId" id="saleProduct"></select></label>
+      <label>الكمية<input type="number" name="qty" value="1" min="1"></label>
+      <label>سعر البيع<input type="number" name="price" required></label>
+      <label>اسم العميل<input required name="customerName"></label>
+      <label>الهاتف<input name="phone"></label>
+      <label>طريقة البيع<select name="saleType"><option>قطاعي</option><option>مع بطارية قديمة</option><option>بدل مرتجع</option></select></label>
+      <label>قيمة البطارية القديمة<input type="number" name="oldBatteryValue" value="0"></label>
+      <label>&nbsp;<button class="btn g" type="submit">حفظ الفاتورة</button></label>
+    </form>
+    <div class="hint">عند الحفظ: يُخصم المخزون تلقائياً، يُسجل العميل، يُنشأ سجل ضمان، ويُحسب الربح.</div>
+  </div>
+  <div class="card"><h2>الفواتير</h2><div class="tblwrap"><table id="tblSales"></table></div></div>
+</div>
+
+<div class="tab" id="tab-customers">
+  <div class="card"><h2>بحث</h2><input id="custSearch" placeholder="اسم أو رقم موبايل..."></div>
+  <div class="card"><div class="tblwrap"><table id="tblCustomers"></table></div></div>
+</div>
+
+<div class="tab" id="tab-warranty">
+  <div class="card"><h2>الضمانات</h2><div class="tblwrap"><table id="tblWarranty"></table></div></div>
+</div>
+
+<div class="tab" id="tab-returns">
+  <div class="card"><h2>تسجيل مرتجع</h2>
+    <form id="fReturn">
+      <label>العميل<input required name="customerName"></label>
+      <label>الصنف<input required name="productName"></label>
+      <label>تاريخ الشراء<input type="date" name="purchaseDate"></label>
+      <label>سبب الرجوع<input name="reason"></label>
+      <label>الحالة<select name="status"><option>تحت الفحص</option><option>سليمة</option><option>بها عيب</option><option>تم الاستبدال</option></select></label>
+      <label>&nbsp;<button class="btn" type="submit">إضافة</button></label>
+    </form>
+  </div>
+  <div class="card"><div class="tblwrap"><table id="tblReturns"></table></div></div>
+</div>
+
+<div class="tab" id="tab-purchases">
+  <div class="card"><h2>فاتورة شراء (توريد مخزون)</h2>
+    <form id="fPurchase">
+      <label>المورد<input name="supplier"></label>
+      <label>الصنف<select required name="productId" id="purProduct"></select></label>
+      <label>الكمية<input type="number" name="qty" value="1"></label>
+      <label>تكلفة الوحدة<input type="number" name="cost"></label>
+      <label>&nbsp;<button class="btn g" type="submit">حفظ وزيادة المخزون</button></label>
+    </form>
+  </div>
+  <div class="card"><div class="tblwrap"><table id="tblPurchases"></table></div></div>
+</div>
+
+<div class="tab" id="tab-scrap">
+  <div class="card"><h2>إضافة خردة (بطاريات قديمة)</h2>
+    <form id="fScrap">
+      <label>المقاس<input name="size"></label>
+      <label>العدد<input type="number" name="count" value="1"></label>
+      <label>الوزن (كجم)<input type="number" name="weight"></label>
+      <label>سعر الكيلو<input type="number" name="pricePerKg"></label>
+      <label>المصدر<select name="source"><option>من العملاء</option><option>شراء مباشر</option><option>مرتجعات</option></select></label>
+      <label>اسم البائع (اختياري)<input name="sellerName"></label>
+      <label>&nbsp;<button class="btn" type="submit">إضافة</button></label>
+    </form>
+  </div>
+  <div class="card"><div class="tblwrap"><table id="tblScrap"></table></div></div>
+</div>
+
+<div class="tab" id="tab-expenses">
+  <div class="card"><h2>إضافة مصروف</h2>
+    <form id="fExpense">
+      <label>النوع<select name="type"><option>كهرباء</option><option>إنترنت</option><option>إيجار</option><option>أكل</option><option>نقل</option><option>مشتريات خارجية</option><option>أخرى</option></select></label>
+      <label>المبلغ<input type="number" name="amount" required></label>
+      <label>ملاحظة<input name="note"></label>
+      <label>&nbsp;<button class="btn r" type="submit">إضافة</button></label>
+    </form>
+  </div>
+  <div class="card"><div class="tblwrap"><table id="tblExpenses"></table></div></div>
+</div>
+
+<div class="tab" id="tab-reports">
+  <div class="card">
+    <h2>تقرير فترة</h2>
+    <form id="fReport" style="margin-bottom:10px">
+      <label>من<input type="date" name="from"></label>
+      <label>إلى<input type="date" name="to"></label>
+      <label>&nbsp;<button class="btn" type="submit">عرض</button></label>
+    </form>
+    <div id="reportOut"></div>
+  </div>
+</div>
+
+<div class="tab" id="tab-ai">
+  <div class="card">
+    <h2>🤖 المساعد الذكي (استعلام محلي)</h2>
+    <div class="chat" id="aiChat"><div class="msg"><b>المساعد:</b> اسألني مثلاً: "كم بطارية 70 كولورايد موجودة؟" أو "كم ربحت هذا الشهر؟" أو "ما أكثر صنف مبيعاً؟" أو "الأصناف الناقصة"</div></div>
+    <form id="fAi"><label style="flex:3"><input name="q" placeholder="اكتب سؤالك..." required></label><label>&nbsp;<button class="btn" type="submit">إرسال</button></label></form>
+  </div>
+</div>
+
+</main>
+<script>
+const KEY='battery_shop_db_v1';
+const D = JSON.parse(localStorage.getItem(KEY)||'null') || {products:[],sales:[],customers:[],warranties:[],returns:[],purchases:[],scrap:[],expenses:[]};
+function save(){ localStorage.setItem(KEY, JSON.stringify(D)); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmt(n){ return (Number(n)||0).toLocaleString('ar-EG'); }
+
+const tabs=[['dash','لوحة التحكم'],['products','الأصناف'],['sales','المبيعات'],['customers','العملاء'],['warranty','الضمانات'],['returns','المرتجعات'],['purchases','المشتريات'],['scrap','الخردة'],['expenses','المصروفات'],['reports','التقارير'],['ai','المساعد الذكي']];
+const nav=document.getElementById('nav');
+tabs.forEach(([id,label],i)=>{
+  const b=document.createElement('button'); b.textContent=label; b.onclick=()=>show(id);
+  b.id='navbtn-'+id; nav.appendChild(b);
+});
+function show(id){
+  tabs.forEach(([t])=>{document.getElementById('tab-'+t).classList.remove('active');document.getElementById('navbtn-'+t).classList.remove('active');});
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('navbtn-'+id).classList.add('active');
+  renderAll();
+}
+
+function addCustomer(name,phone,amount){
+  let c=D.customers.find(c=>c.phone===phone && phone);
+  if(!c) c=D.customers.find(c=>c.name===name);
+  if(!c){ c={name,phone,firstPurchaseDate:today(),invoiceCount:0,totalPurchases:0}; D.customers.push(c); }
+  c.invoiceCount++; c.totalPurchases+=amount;
+}
+
+// ---- Products ----
+document.getElementById('fProduct').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const p=Object.fromEntries(f.entries());
+  p.id=uid(); p.buyPrice=+p.buyPrice; p.sellPrice=+p.sellPrice; p.qty=+p.qty; p.minAlert=+p.minAlert; p.warrantyMonths=+p.warrantyMonths;
+  D.products.push(p); save(); e.target.reset(); renderAll();
+};
+function renderProducts(){
+  const rows=D.products.map(p=>`<tr><td>${p.name}</td><td>${p.size}</td><td>${p.brand||'-'}</td><td>${p.origin}</td><td>${fmt(p.buyPrice)}</td><td>${fmt(p.sellPrice)}</td><td>${p.qty<=p.minAlert?`<span class="badge b-bad">${p.qty}</span>`:p.qty}</td><td><button class="btn r" onclick="delItem('products','${p.id}')">حذف</button></td></tr>`).join('');
+  document.getElementById('tblProducts').innerHTML=`<tr><th>الاسم</th><th>المقاس</th><th>الماركة</th><th>المنشأ</th><th>شراء</th><th>بيع</th><th>الكمية</th><th></th></tr>${rows||'<tr><td colspan=8>لا توجد أصناف</td></tr>'}`;
+  const opts=D.products.map(p=>`<option value="${p.id}">${p.name} (${p.size}) - متاح ${p.qty}</option>`).join('');
+  document.getElementById('saleProduct').innerHTML=opts;
+  document.getElementById('purProduct').innerHTML=opts;
+}
+window.delItem=(arr,id)=>{ D[arr]=D[arr].filter(x=>x.id!==id); save(); renderAll(); };
+
+// ---- Sales ----
+document.getElementById('fSale').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const s=Object.fromEntries(f.entries());
+  const p=D.products.find(x=>x.id===s.productId); if(!p) return;
+  s.qty=+s.qty; s.price=+s.price; s.oldBatteryValue=+s.oldBatteryValue;
+  if(p.qty<s.qty){ alert('الكمية غير متوفرة بالمخزون'); return; }
+  p.qty-=s.qty;
+  const total=s.price*s.qty - s.oldBatteryValue;
+  const profit=(s.price-p.buyPrice)*s.qty;
+  s.id=uid(); s.invoiceNo='INV-'+(D.sales.length+1001); s.date=today(); s.productName=p.name; s.total=total; s.profit=profit;
+  D.sales.push(s);
+  addCustomer(s.customerName,s.phone,total);
+  D.warranties.push({id:uid(),productName:p.name,customerName:s.customerName,phone:s.phone,saleDate:today(),warrantyType:p.warrantyType,months:p.warrantyMonths,sellPrice:s.price,status:'سارٍ'});
+  save(); e.target.reset(); renderAll();
+};
+function warrantyEndInfo(w){
+  const end=new Date(w.saleDate); end.setMonth(end.getMonth()+(+w.months));
+  return end;
+}
+function renderSales(){
+  const rows=D.sales.slice().reverse().map(s=>`<tr><td>${s.invoiceNo}</td><td>${s.date}</td><td>${s.customerName}</td><td>${s.productName}</td><td>${s.qty}</td><td>${fmt(s.price)}</td><td>${fmt(s.total)}</td><td>${fmt(s.profit)}</td><td>${s.saleType}</td></tr>`).join('');
+  document.getElementById('tblSales').innerHTML=`<tr><th>فاتورة</th><th>تاريخ</th><th>العميل</th><th>الصنف</th><th>كمية</th><th>سعر</th><th>إجمالي</th><th>ربح</th><th>نوع</th></tr>${rows||'<tr><td colspan=9>لا توجد فواتير</td></tr>'}`;
+}
+
+// ---- Customers ----
+function renderCustomers(){
+  const q=(document.getElementById('custSearch').value||'').trim();
+  const list=D.customers.filter(c=>!q||c.name.includes(q)||(c.phone||'').includes(q));
+  const rows=list.map(c=>`<tr><td>${c.name}</td><td>${c.phone||'-'}</td><td>${c.firstPurchaseDate}</td><td>${c.invoiceCount}</td><td>${fmt(c.totalPurchases)}</td></tr>`).join('');
+  document.getElementById('tblCustomers').innerHTML=`<tr><th>الاسم</th><th>الهاتف</th><th>أول شراء</th><th>عدد الفواتير</th><th>إجمالي المشتريات</th></tr>${rows||'<tr><td colspan=5>لا يوجد عملاء</td></tr>'}`;
+}
+document.getElementById('custSearch').oninput=renderCustomers;
+
+// ---- Warranties ----
+function renderWarranty(){
+  const rows=D.warranties.slice().reverse().map(w=>{
+    const end=warrantyEndInfo(w); const left=Math.ceil((end-new Date())/86400000);
+    const badge= left<0?'<span class="badge b-bad">منتهي</span>': left<30?'<span class="badge b-warn">قريباً</span>':'<span class="badge b-ok">سارٍ</span>';
+    let consume='-';
+    if(w.warrantyType==='استهلاك'){
+      const monthly=w.sellPrice/(w.months||12);
+      const monthsUsed=Math.max(0,Math.floor((new Date()-new Date(w.saleDate))/(30*86400000)));
+      consume=fmt(Math.round(monthly*monthsUsed))+' ج (استهلاك حتى الآن)';
+    }
+    return `<tr><td>${w.productName}</td><td>${w.customerName}</td><td>${w.warrantyType}</td><td>${w.saleDate}</td><td>${end.toISOString().slice(0,10)}</td><td>${badge}</td><td>${consume}</td></tr>`;
+  }).join('');
+  document.getElementById('tblWarranty').innerHTML=`<tr><th>الصنف</th><th>العميل</th><th>النوع</th><th>بداية</th><th>نهاية</th><th>الحالة</th><th>الاستهلاك</th></tr>${rows||'<tr><td colspan=7>لا توجد ضمانات</td></tr>'}`;
+}
+
+// ---- Returns ----
+document.getElementById('fReturn').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const r=Object.fromEntries(f.entries());
+  r.id=uid(); r.returnDate=today(); D.returns.push(r); save(); e.target.reset(); renderAll();
+};
+function renderReturns(){
+  const rows=D.returns.slice().reverse().map(r=>`<tr><td>${r.customerName}</td><td>${r.productName}</td><td>${r.purchaseDate||'-'}</td><td>${r.returnDate}</td><td>${r.reason||'-'}</td><td>${r.status}</td></tr>`).join('');
+  document.getElementById('tblReturns').innerHTML=`<tr><th>العميل</th><th>الصنف</th><th>شراء</th><th>رجوع</th><th>السبب</th><th>الحالة</th></tr>${rows||'<tr><td colspan=6>لا توجد مرتجعات</td></tr>'}`;
+}
+
+// ---- Purchases ----
+document.getElementById('fPurchase').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const pur=Object.fromEntries(f.entries());
+  const p=D.products.find(x=>x.id===pur.productId); if(!p) return;
+  pur.qty=+pur.qty; pur.cost=+pur.cost; p.qty+=pur.qty;
+  pur.id=uid(); pur.date=today(); pur.productName=p.name; pur.total=pur.qty*pur.cost;
+  D.purchases.push(pur); save(); e.target.reset(); renderAll();
+};
+function renderPurchases(){
+  const rows=D.purchases.slice().reverse().map(p=>`<tr><td>${p.date}</td><td>${p.supplier||'-'}</td><td>${p.productName}</td><td>${p.qty}</td><td>${fmt(p.cost)}</td><td>${fmt(p.total)}</td></tr>`).join('');
+  document.getElementById('tblPurchases').innerHTML=`<tr><th>تاريخ</th><th>المورد</th><th>الصنف</th><th>كمية</th><th>تكلفة</th><th>إجمالي</th></tr>${rows||'<tr><td colspan=6>لا توجد مشتريات</td></tr>'}`;
+}
+
+// ---- Scrap ----
+document.getElementById('fScrap').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const s=Object.fromEntries(f.entries());
+  s.weight=+s.weight; s.pricePerKg=+s.pricePerKg; s.count=+s.count;
+  s.id=uid(); s.date=today(); s.totalValue=s.weight*s.pricePerKg;
+  D.scrap.push(s); save(); e.target.reset(); renderAll();
+};
+function renderScrap(){
+  const rows=D.scrap.slice().reverse().map(s=>`<tr><td>${s.size||'-'}</td><td>${s.count}</td><td>${s.weight}</td><td>${fmt(s.pricePerKg)}</td><td>${fmt(s.totalValue)}</td><td>${s.source}</td><td>${s.sellerName||'-'}</td></tr>`).join('');
+  document.getElementById('tblScrap').innerHTML=`<tr><th>المقاس</th><th>العدد</th><th>الوزن</th><th>سعر/كجم</th><th>القيمة</th><th>المصدر</th><th>البائع</th></tr>${rows||'<tr><td colspan=7>لا توجد خردة</td></tr>'}`;
+}
+
+// ---- Expenses ----
+document.getElementById('fExpense').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const x=Object.fromEntries(f.entries());
+  x.amount=+x.amount; x.id=uid(); x.date=today(); D.expenses.push(x); save(); e.target.reset(); renderAll();
+};
+function renderExpenses(){
+  const rows=D.expenses.slice().reverse().map(x=>`<tr><td>${x.date}</td><td>${x.type}</td><td>${fmt(x.amount)}</td><td>${x.note||'-'}</td></tr>`).join('');
+  document.getElementById('tblExpenses').innerHTML=`<tr><th>تاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظة</th></tr>${rows||'<tr><td colspan=4>لا توجد مصروفات</td></tr>'}`;
+}
+
+// ---- Reports ----
+function periodStats(from,to){
+  const inRange=d=> (!from||d>=from) && (!to||d<=to);
+  const sales=D.sales.filter(s=>inRange(s.date));
+  const exps=D.expenses.filter(x=>inRange(x.date));
+  const totalSales=sales.reduce((a,s)=>a+s.total,0);
+  const totalProfit=sales.reduce((a,s)=>a+s.profit,0) - exps.reduce((a,x)=>a+x.amount,0);
+  const count={}; sales.forEach(s=>count[s.productName]=(count[s.productName]||0)+s.qty);
+  const top=Object.entries(count).sort((a,b)=>b[1]-a[1])[0];
+  return {salesCount:sales.length,totalSales,totalProfit,batteries:sales.reduce((a,s)=>a+s.qty,0),top};
+}
+document.getElementById('fReport').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target);
+  const st=periodStats(f.get('from'),f.get('to'));
+  document.getElementById('reportOut').innerHTML=`<div class="grid">
+    <div class="stat"><span>عدد الفواتير</span><b>${st.salesCount}</b></div>
+    <div class="stat"><span>إجمالي المبيعات</span><b>${fmt(st.totalSales)}</b></div>
+    <div class="stat"><span>صافي الربح</span><b>${fmt(st.totalProfit)}</b></div>
+    <div class="stat"><span>عدد البطاريات المباعة</span><b>${st.batteries}</b></div>
+    <div class="stat"><span>الأكثر مبيعاً</span><b style="font-size:14px">${st.top?st.top[0]+' ('+st.top[1]+')':'-'}</b></div>
+  </div>`;
+};
+
+// ---- Dashboard ----
+function renderDash(){
+  const t=today();
+  const dayS=periodStats(t,t), monthS=periodStats(t.slice(0,7)+'-01',t);
+  document.getElementById('dashGrid').innerHTML=`
+    <div class="stat"><span>مبيعات اليوم</span><b>${fmt(dayS.totalSales)}</b></div>
+    <div class="stat"><span>ربح اليوم</span><b>${fmt(dayS.totalProfit)}</b></div>
+    <div class="stat"><span>مبيعات الشهر</span><b>${fmt(monthS.totalSales)}</b></div>
+    <div class="stat"><span>ربح الشهر</span><b>${fmt(monthS.totalProfit)}</b></div>
+    <div class="stat"><span>عدد الفواتير</span><b>${D.sales.length}</b></div>
+    <div class="stat"><span>عدد العملاء</span><b>${D.customers.length}</b></div>
+    <div class="stat"><span>قيمة المخزون</span><b>${fmt(D.products.reduce((a,p)=>a+p.qty*p.buyPrice,0))}</b></div>
+  `;
+  const low=D.products.filter(p=>p.qty<=p.minAlert);
+  const endingSoon=D.warranties.filter(w=>{const d=(warrantyEndInfo(w)-new Date())/86400000; return d>0&&d<30;});
+  const openRet=D.returns.filter(r=>r.status==='تحت الفحص');
+  document.getElementById('dashAlerts').innerHTML=
+    `<p>⚠️ أصناف ناقصة: ${low.length? low.map(p=>p.name).join('، '):'لا يوجد'}</p>
+     <p>⏳ ضمانات تنتهي خلال 30 يوم: ${endingSoon.length}</p>
+     <p>↩️ مرتجعات مفتوحة: ${openRet.length}</p>`;
+}
+
+// ---- AI assistant (local rule-based) ----
+document.getElementById('fAi').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const q=f.get('q').trim();
+  const chat=document.getElementById('aiChat');
+  chat.innerHTML+=`<div class="msg"><b>أنت:</b> ${q}</div>`;
+  let ans='لم أفهم السؤال، جرّب: "كم [اسم صنف] موجودة؟" أو "الربح هذا الشهر" أو "أكثر صنف مبيعاً" أو "الأصناف الناقصة" أو "عدد العملاء آخر 30 يوم"';
+  const ql=q.toLowerCase();
+  if(q.includes('ناقص')){
+    const low=D.products.filter(p=>p.qty<=p.minAlert);
+    ans= low.length? 'الأصناف التي ستنفد قريباً: '+low.map(p=>p.name+' ('+p.qty+')').join('، ') : 'لا توجد أصناف ناقصة حالياً.';
+  } else if(q.includes('أكثر') && q.includes('مبيع')){
+    const st=periodStats(null,null); ans= st.top? 'الأكثر مبيعاً: '+st.top[0]+' بعدد '+st.top[1]+' قطعة.' : 'لا توجد مبيعات بعد.';
+  } else if(q.includes('ربح')){
+    const t=today(); const st=q.includes('اليوم')?periodStats(t,t):periodStats(t.slice(0,7)+'-01',t);
+    ans='صافي الربح: '+fmt(st.totalProfit)+' جنيه.';
+  } else if(q.includes('عميل') && (q.includes('30')||q.includes('شهر'))){
+    const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-30);
+    const c=D.customers.filter(c=>new Date(c.firstPurchaseDate)>=cutoff).length;
+    ans='عدد العملاء الجدد آخر 30 يوم: '+c;
+  } else if(q.includes('كم')){
+    const p=D.products.find(p=>q.includes(p.name));
+    if(p) ans=`الكمية المتاحة من "${p.name}": ${p.qty} قطعة.`;
+  }
+  chat.innerHTML+=`<div class="msg"><b>المساعد:</b> ${ans}</div>`;
+  chat.scrollTop=chat.scrollHeight; e.target.reset();
+};
+
+function renderAll(){ renderProducts();renderSales();renderCustomers();renderWarranty();renderReturns();renderPurchases();renderScrap();renderExpenses();renderDash(); }
+show('dash');
+
+// ---- Theme toggle ----
+const themeBtn=document.getElementById('themeBtn');
+function applyTheme(t){ document.documentElement.setAttribute('data-theme',t); themeBtn.textContent = t==='dark' ? '☀️' : '🌙'; localStorage.setItem('shop_theme',t); }
+applyTheme(localStorage.getItem('shop_theme') || 'dark');
+themeBtn.onclick=()=>{ const cur=document.documentElement.getAttribute('data-theme'); applyTheme(cur==='dark'?'light':'dark'); };
+
+// ---- Admin login (local only, for basic access control) ----
+const AUTH_KEY='shop_admin_auth', CREDS_KEY='shop_admin_creds';
+function getCreds(){ return JSON.parse(localStorage.getItem(CREDS_KEY)||'null') || {user:'admin',pass:'admin123'}; }
+const loginWrap=document.getElementById('loginWrap');
+function checkAuth(){
+  if(sessionStorage.getItem(AUTH_KEY)==='1'){ loginWrap.style.display='none'; }
+  else { loginWrap.style.display='flex'; }
+}
+document.getElementById('fLogin').onsubmit=e=>{
+  e.preventDefault(); const f=new FormData(e.target); const u=f.get('user').trim(); const p=f.get('pass');
+  const c=getCreds();
+  if(u===c.user && p===c.pass){ sessionStorage.setItem(AUTH_KEY,'1'); document.getElementById('loginErr').textContent=''; checkAuth(); }
+  else{ document.getElementById('loginErr').textContent='بيانات الدخول غير صحيحة'; }
+};
+document.getElementById('logoutBtn').onclick=()=>{ sessionStorage.removeItem(AUTH_KEY); checkAuth(); };
+document.getElementById('loginSub').textContent = 'أدخل بيانات الدخول للوصول لنظام إدارة المحل — افتراضياً: admin / admin123';
+checkAuth();
+</script>
+</body>
+</html>
